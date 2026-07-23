@@ -17,4 +17,4 @@ Route::apiResource('orders', OrderController::class)
         'index',
         'store',
         'show',
-    ]);
+    ])->names('api.orders');

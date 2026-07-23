@@ -18,6 +18,12 @@ Route::get('/orders/create', function () {
     return inertia('Orders/Create');
 })->name('orders.create');
 
+Route::get('/orders/{order}', function ($order) {
+    return inertia('Orders/Show', [
+        'orderId' => $order,
+    ]);
+})->name('orders.show');
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
