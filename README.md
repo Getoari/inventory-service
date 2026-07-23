@@ -657,8 +657,7 @@ Potential future improvements include:
 
 * Authentication and authorization
 * Product creation and editing UI
-* Product search and filtering
-* Pagination
+* Product filtering improvement
 * Order history
 * Order status management
 * Low-stock notifications

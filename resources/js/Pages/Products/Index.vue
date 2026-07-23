@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import axios from 'axios'
 import { Link } from '@inertiajs/vue3'
 
@@ -7,14 +7,33 @@ const products = ref([])
 const loading = ref(true)
 const error = ref(null)
 
-const fetchProducts = async () => {
+const search = ref('')
+const category = ref('')
+
+const pagination = ref({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+})
+
+let searchTimeout = null
+
+const fetchProducts = async (page = 1) => {
     loading.value = true
     error.value = null
 
     try {
-        const response = await axios.get('/api/products')
+        const response = await axios.get('/api/products', {
+            params: {
+                page,
+                per_page: pagination.value.per_page,
+                search: search.value || undefined
+            },
+        })
 
         products.value = response.data.data
+        pagination.value = response.data.meta
     } catch (err) {
         error.value = 'Unable to load products.'
         console.error(err)
@@ -22,6 +41,30 @@ const fetchProducts = async () => {
         loading.value = false
     }
 }
+
+const goToPage = (page) => {
+    if (
+        page < 1 ||
+        page > pagination.value.last_page ||
+        page === pagination.value.current_page
+    ) {
+        return
+    }
+
+    fetchProducts(page)
+}
+
+watch(search, () => {
+    clearTimeout(searchTimeout)
+
+    searchTimeout = setTimeout(() => {
+        fetchProducts(1)
+    }, 300)
+})
+
+watch(category, () => {
+    fetchProducts(1)
+})
 
 onMounted(() => {
     fetchProducts()
@@ -50,6 +93,29 @@ onMounted(() => {
                 >
                     Create Order
                 </Link>
+            </div>
+
+            <!-- Filters -->
+            <div class="mb-6 rounded-lg bg-white p-6 shadow">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <!-- Search -->
+                    <div>
+                        <label
+                            for="search"
+                            class="block text-sm font-medium text-gray-700"
+                        >
+                            Search
+                        </label>
+
+                        <input
+                            id="search"
+                            v-model="search"
+                            type="text"
+                            placeholder="Search by name, SKU or category..."
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
             </div>
 
             <!-- Loading -->
@@ -161,6 +227,55 @@ onMounted(() => {
                 </div>
             </div>
 
+        </div>
+
+        <!-- Pagination -->
+        <div
+            v-if="pagination.last_page > 1"
+            class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4"
+        >
+            <div class="text-sm text-gray-600">
+                Showing
+                <span class="font-medium">
+                    {{ (pagination.current_page - 1) * pagination.per_page + 1 }}
+                </span>
+                to
+                <span class="font-medium">
+                    {{
+                        Math.min(
+                            pagination.current_page * pagination.per_page,
+                            pagination.total
+                        )
+                    }}
+                </span>
+                of
+                <span class="font-medium">
+                    {{ pagination.total }}
+                </span>
+                products
+            </div>
+
+            <div class="flex gap-2">
+                <button
+                    type="button"
+                    :disabled="pagination.current_page === 1"
+                    class="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    @click="goToPage(pagination.current_page - 1)"
+                >
+                    Previous
+                </button>
+
+                <button
+                    type="button"
+                    :disabled="
+                        pagination.current_page === pagination.last_page
+                    "
+                    class="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    @click="goToPage(pagination.current_page + 1)"
+                >
+                    Next
+                </button>
+            </div>
         </div>
     </div>
 </template>

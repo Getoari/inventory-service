@@ -7,20 +7,39 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of products.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request)
     {
         $products = Product::query()
-            ->latest()
-            ->get();
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->input('search');
 
-        return ProductResource::collection($products);
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate(
+                $request->integer('per_page', 10)
+            );
+
+        return response()->json([
+            'data' => $products->items(),
+            'meta' => [
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ],
+        ]);
     }
 
     /**
